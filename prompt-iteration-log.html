@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Iteration Log — Designing Intelligence</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Nunito+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d5868;--bg2:#0a4858;--teal:#1a7a8f;
+  --card:rgba(255,255,255,.09);--bord:rgba(255,255,255,.13);
+  --wh:#fff;--mu:rgba(255,255,255,.52);--inp:rgba(0,0,0,.22);
+  --amber:#f7c862;--green:#5dd68a;
+}
+html,body{height:100%;font-family:'Nunito Sans',sans-serif;background:var(--bg);color:var(--wh);font-size:14px}
+h1,h2,h3{font-family:'Nunito',sans-serif}
+#app{min-height:100vh}
+.mu{color:var(--mu)}
+.label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--mu);display:block;margin-bottom:5px;font-family:'Nunito',sans-serif;font-weight:700}
+.divider{height:1px;background:rgba(255,255,255,.09);margin:14px 0}
+button{cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;border:none;border-radius:50px;padding:11px 24px;font-size:13px;transition:transform .12s,opacity .12s}
+button:hover{opacity:.83} button:active{transform:scale(.97)}
+.bp{background:var(--wh);color:var(--bg2)}
+.bg{background:rgba(255,255,255,.10);color:var(--wh);border:1px solid var(--bord)}
+.ba{background:var(--amber);color:#3a2800}
+.bs{padding:8px 16px;font-size:12px}
+.blink{background:none;border:none;color:var(--mu);padding:0;border-radius:0;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-bottom:4px}
+.blink:hover{color:var(--wh);opacity:1}
+.fr{margin-bottom:14px}
+input,textarea,select{width:100%;background:var(--inp);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:11px 15px;font-family:'Nunito Sans',sans-serif;font-size:13px;color:var(--wh);outline:none;resize:vertical;transition:border-color .2s}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,.26)}
+input:focus,textarea:focus,select:focus{border-color:rgba(255,255,255,.42)}
+select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.5)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
+select option{background:#0d5868;color:#fff}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:20px;padding:20px}
+.hdr{background:rgba(0,0,0,.20);border-bottom:1px solid rgba(255,255,255,.08);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.eyebrow{font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:var(--mu);font-family:'Nunito',sans-serif}
+.logo{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px}
+.scr{max-width:800px;margin:0 auto;padding:22px 20px}
+.inum{width:34px;height:34px;border-radius:50%;background:rgba(74,158,187,.28);border:1.5px solid rgba(74,158,187,.48);color:var(--wh);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Nunito',sans-serif}
+.pill{display:inline-block;padding:3px 11px;border-radius:50px;font-size:11px;font-weight:700;margin:2px;font-family:'Nunito',sans-serif}
+.pg{background:rgba(93,214,138,.13);color:#8eedb5;border:1px solid rgba(93,214,138,.23)}
+.py{background:rgba(247,200,98,.13);color:#f7da8a;border:1px solid rgba(247,200,98,.23)}
+.pr{background:rgba(212,120,154,.16);color:#e8a0be;border:1px solid rgba(212,120,154,.26)}
+.pb2{height:4px;border-radius:50px;background:rgba(255,255,255,.09);margin-top:6px;overflow:hidden}
+.pf{height:100%;border-radius:50px;background:rgba(74,158,187,.65)}
+.star{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);font-size:14px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;margin-right:3px;user-select:none}
+.star.on{background:var(--amber);border-color:var(--amber);color:#3a2800}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(162px,1fr));gap:10px;margin-top:14px}
+.stile{background:var(--card);border:1px solid var(--bord);border-radius:16px;padding:16px;cursor:pointer;transition:background .15s}
+.stile:hover{background:rgba(255,255,255,.15)}
+.fbbox{background:rgba(247,200,98,.07);border:1px solid rgba(247,200,98,.19);border-radius:12px;padding:11px 14px;margin-top:10px}
+.sa{max-height:70vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.sa::-webkit-scrollbar{width:4px}
+.sa::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+.loading{display:flex;align-items:center;justify-content:center;padding:52px;color:var(--mu);font-size:13px}
+#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center}
+.landing-card{background:rgba(0,0,0,.22);border:1px solid var(--bord);border-radius:28px;padding:32px 28px;width:100%;max-width:380px;margin-top:-12px}
+@media print{
+  body{background:#fff!important;color:#222!important}
+  .no-print{display:none!important}
+  .pp{background:#fff;color:#222;padding:30px;max-width:680px;margin:0 auto}
+  .pi{border:1px solid #dde;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid}
+  .ph{border-bottom:2.5px solid #1a7a8f;padding-bottom:12px;margin-bottom:20px}
+  .pil{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#888;margin-bottom:3px;font-weight:700;font-family:'Nunito',sans-serif}
+  .pifb{background:#fffbe6;border-left:3px solid #b07a00;padding:8px 11px;border-radius:5px;margin-top:8px}
+}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Connecting…</div></div>
+<script>
+
+// ══════════════════════════════════════════════════════════
+//  ROSTER — edit this list to match your class
+//  Use "First Last" format, exactly as you want it to appear
+// ══════════════════════════════════════════════════════════
+const ROSTER = [
+  "A Lucas",
+  "B Eugene",
+  "C Amy",
+  "D Jason",
+  "E Isabel",
+  "F Yuha,
+  "G Jiwon",
+  "H Minsol",
+  "I Claire",
+  "J Richard",
+  "K Katie",
+  "L Jin",
+  "M Denis",
+  "N Jihan",
+  "O Ellen",
+  "P Alex",
+  "Q Stella",
+  "R Soyoon",
+  "S Daniel",
+  "T Matthew",
+  "U Eden",
+  "V Yikyeung",
+  "W Derong"
+].sort();
+// ══════════════════════════════════════════════════════════
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDOz1f1ymRvEW6-_M6maLmyBjT7EFjn3R8",
+  authDomain: "prompt-iteration-log.firebaseapp.com",
+  projectId: "prompt-iteration-log",
+  storageBucket: "prompt-iteration-log.firebasestorage.app",
+  messagingSenderId: "408092129353",
+  appId: "1:408092129353:web:d645d401efee6c0f1f6798"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+
+const S = { student: null, tStudent: null };
+const app = document.getElementById('app');
+let gyreRaf = null, gyreT = 0;
+window._rating = 0;
+
+function nk(n){ return n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function eA(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+async function ensureStudent(name){
+  const key = nk(name);
+  await db.collection('students').doc(key).set({name, updatedAt:TS()},{merge:true});
+  return key;
+}
+async function getRoster(){
+  const snap = await db.collection('students').get();
+  return snap.docs.map(d=>({key:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+}
+async function getIters(key){
+  const snap = await db.collection('students').doc(key).collection('iterations').orderBy('idx').get();
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+async function addIter(key, iter){
+  const existing = await getIters(key);
+  iter.idx = existing.length;
+  iter.createdAt = TS();
+  await db.collection('students').doc(key).collection('iterations').add(iter);
+}
+async function getFeedbacks(key){
+  const snap = await db.collection('students').doc(key).collection('feedback').get();
+  const fbs = {};
+  snap.docs.forEach(d=>{ fbs[d.id] = d.data().text||''; });
+  return fbs;
+}
+async function saveFeedback(key, idx, text){
+  await db.collection('students').doc(key).collection('feedback').doc(String(idx)).set({text, updatedAt:TS()});
+}
+
+function startGyre(canvasId){
+  stopGyre();
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, top = H*0.04, bot = H*0.96;
+  const totalH = bot-top, maxR = W*0.39, turns = 3.5, steps = 300;
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=0.7;
+    [[cx,top,cx-maxR,bot],[cx,top,cx+maxR,bot],[cx-maxR,top,cx,bot],[cx+maxR,top,cx,bot]]
+      .forEach(([x1,y1,x2,y2])=>{ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); });
+    ctx.restore();
+    for(let r=1; r<6; r++){
+      const p=r/6, y=top+p*totalH;
+      [[p*maxR,'rgba(74,158,187,',(1-p)],[(1-p)*maxR,'rgba(212,120,154,',p]].forEach(([rx,col,a])=>{
+        if(rx<4) return;
+        ctx.save(); ctx.strokeStyle=col+(0.04+0.04*a)+')'; ctx.lineWidth=0.5;
+        ctx.beginPath(); ctx.ellipse(cx,y,rx,rx*0.20,0,0,Math.PI*2); ctx.stroke(); ctx.restore();
+      });
+    }
+    function drawSpiral(r,g,b,expandsDown,dir){
+      for(let i=1;i<=steps;i++){
+        const p=i/steps,pp=(i-1)/steps;
+        const rad=(expandsDown?p:1-p)*maxR, radp=(expandsDown?pp:1-pp)*maxR;
+        const ang=p*turns*Math.PI*2*dir+gyreT*dir, angp=pp*turns*Math.PI*2*dir+gyreT*dir;
+        const wb=rad*0.18, wbp=radp*0.18;
+        const x=cx+rad*Math.cos(ang), y=top+p*totalH+wb*Math.sin(ang);
+        const xp=cx+radp*Math.cos(angp), yp=top+pp*totalH+wbp*Math.sin(angp);
+        const depth=(Math.sin(ang)+1)/2;
+        ctx.save(); ctx.strokeStyle=`rgba(${r},${g},${b},${0.16+0.72*depth})`;
+        ctx.lineWidth=0.6+1.5*depth; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(xp,yp); ctx.lineTo(x,y); ctx.stroke(); ctx.restore();
+      }
+    }
+    drawSpiral(74,158,187,true,-1);
+    drawSpiral(212,120,154,false,1);
+    ctx.save(); ctx.beginPath(); ctx.arc(cx,top+totalH/2,2.8,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill(); ctx.restore();
+    gyreT+=0.005;
+    gyreRaf=requestAnimationFrame(frame);
+  }
+  frame();
+}
+function stopGyre(){ if(gyreRaf){ cancelAnimationFrame(gyreRaf); gyreRaf=null; } }
+
+function hdr(title, sub, backFn){
+  return `<div class="hdr no-print">
+    <div>
+      ${backFn?`<button class="blink" onclick="${backFn}">← Back</button>`:''}
+      <div class="eyebrow">Designing Intelligence</div>
+      <div class="logo">${title}</div>
+      ${sub?`<div style="font-size:12px;color:var(--mu);margin-top:1px">${esc(sub)}</div>`:''}
+    </div>
+    <svg width="64" height="64" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.07;flex-shrink:0">
+      <path d="M34 34 Q44 24 54 34 Q64 44 54 54 Q38 68 22 54 Q4 36 16 18 Q28 2 54 12" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M34 34 Q24 24 14 34 Q4 44 14 54 Q30 68 46 54 Q64 36 52 18 Q40 2 14 12" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+  </div>`;
+}
+
+function renderLanding(){
+  stopGyre();
+  app.innerHTML = `
+  <div id="landing">
+    <canvas id="gyreCanvas" width="200" height="290"></canvas>
+    <div class="landing-card">
+      <div class="fr">
+        <div style="font-family:'Nunito',sans-serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Prompt Iteration Log</div>
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:5px">Designing Intelligence</h2>
+        <div class="mu" style="font-size:12px;line-height:1.75">Select your name to open your log.</div>
+      </div>
+      <div class="fr" style="margin-top:18px">
+        <span class="label">Your name</span>
+        <select id="ni">
+          <option value="">— Select your name —</option>
+          ${ROSTER.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('')}
+        </select>
+      </div>
+      <button class="bp" style="width:100%;margin-top:12px" onclick="enterStudent()">Open My Log →</button>
+      <div style="height:1px;background:rgba(255,255,255,.09);margin:16px 0"></div>
+      <button class="bg" style="width:100%" onclick="enterTeacher()">Teacher View</button>
+    </div>
+  </div>`;
+  requestAnimationFrame(()=>startGyre('gyreCanvas'));
+}
+
+async function renderStudent(){
+  stopGyre();
+  app.innerHTML=`${hdr('My Iteration Log',S.student.name,'renderLanding()')}<div class="scr"><div class="loading">Loading your log…</div></div>`;
+  const iters=await getIters(S.student.key);
+  const fbs=await getFeedbacks(S.student.key);
+  const n=iters.length;
+  app.querySelector('.scr').innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px" class="no-print">
+    <div>
+      <span class="mu" style="font-size:12px">${n} iteration${n!==1?'s':''} logged</span>
+      ${n?`<div class="pb2" style="width:180px;margin-top:6px"><div class="pf" style="width:${Math.min(100,n*10)}%"></div></div>`:''}
+    </div>
+    <div style="display:flex;gap:8px">
+      ${n?`<button class="bg bs" onclick="renderPrint()">⎙ Print / PDF</button>`:''}
+      <button class="bp" onclick="renderAdd()">+ New Iteration</button>
+    </div>
+  </div>
+  ${!n?`<div class="card" style="text-align:center;padding:40px 24px">
+    <div style="font-weight:800;font-size:16px;font-family:'Nunito',sans-serif;margin-bottom:8px">Ready when you are</div>
+    <div class="mu" style="font-size:13px;line-height:1.7;margin-bottom:22px">Your first prompt was captured on paper.<br>Start logging your iterations here.</div>
+    <button class="bp" onclick="renderAdd()">Log Iteration 1</button>
+  </div>`:`<div class="sa">${iters.map((it,i)=>iterCard(it,i,false,fbs[String(i)]||'')).join('')}</div>`}`;
+}
+
+function renderAdd(){
+  stopGyre(); window._rating=0;
+  app.innerHTML=`${hdr('New Iteration',S.student.name,'renderStudent()')}<div class="scr">
+  <div class="fr"><span class="label">Prompt text *</span>
+    <textarea id="fp" rows="6" placeholder="Paste or type your full prompt here…"></textarea></div>
+  <div class="card" style="margin-bottom:14px">
+    <span class="label" style="margin-bottom:12px">What changed from the last version?</span>
+    <div class="fr"><span class="label" style="color:rgba(93,214,138,.85)">Included — newly added</span>
+      <input type="text" id="fi" placeholder="e.g. role, examples, word limit (comma-separated)"/></div>
+    <div class="fr"><span class="label" style="color:rgba(247,200,98,.85)">Modified — changed</span>
+      <input type="text" id="fm" placeholder="e.g. tone instruction, task wording"/></div>
+    <div class="fr" style="margin-bottom:0"><span class="label" style="color:rgba(212,120,154,.85)">Excluded — removed</span>
+      <input type="text" id="fe" placeholder="e.g. vague phrasing, redundant constraint"/></div>
+  </div>
+  <div class="fr"><span class="label">Output quality rating</span>
+    <div style="margin-top:4px">${[1,2,3,4,5].map(n=>`<span class="star" data-v="${n}" onclick="setStar(${n})">☆</span>`).join('')}</div>
+  </div>
+  <div class="fr"><span class="label">Reflection — what did you notice? What will you try next?</span>
+    <textarea id="frl" rows="3" placeholder="e.g. Adding a role focused the tone. Next I will try constraining the format…"></textarea></div>
+  <div class="fr"><span class="label">Gemini output <span style="font-weight:400;opacity:.4">(optional)</span></span>
+    <textarea id="fg" rows="5" placeholder="Paste Gemini's response here…"></textarea></div>
+  <div style="display:flex;gap:10px;margin-top:6px">
+    <button class="bp" id="saveBtn" style="flex:1" onclick="submitIter()">Save Iteration →</button>
+    <button class="bg" onclick="renderStudent()">Cancel</button>
+  </div></div>`;
+}
+
+function setStar(n){
+  window._rating=n;
+  document.querySelectorAll('.star').forEach(s=>{const v=+s.dataset.v;s.textContent=v<=n?'★':'☆';s.classList.toggle('on',v<=n);});
+}
+
+async function submitIter(){
+  const prompt=(document.getElementById('fp').value||'').trim();
+  if(!prompt){alert('Please enter your prompt text.');return;}
+  const btn=document.getElementById('saveBtn');
+  btn.textContent='Saving…';btn.disabled=true;
+  try{
+    await addIter(S.student.key,{
+      prompt,
+      included:(document.getElementById('fi').value||'').trim(),
+      modified:(document.getElementById('fm').value||'').trim(),
+      excluded:(document.getElementById('fe').value||'').trim(),
+      rating:window._rating||0,
+      reflection:(document.getElementById('frl').value||'').trim(),
+      gemini:(document.getElementById('fg').value||'').trim()
+    });
+    window._rating=0;await renderStudent();
+  }catch(e){btn.textContent='Error — try again';btn.disabled=false;console.error(e);}
+}
+
+function iterCard(it,i,isTeacher,existFb){
+  const stars='★'.repeat(it.rating||0)+'☆'.repeat(5-(it.rating||0));
+  let dateStr='';
+  try{if(it.createdAt)dateStr=it.createdAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){}
+  const chips=[
+    ...(it.included||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span class="pill pg">+ ${esc(s)}</span>`),
+    ...(it.modified||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span class="pill py">~ ${esc(s)}</span>`),
+    ...(it.excluded||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span class="pill pr">− ${esc(s)}</span>`)
+  ].join('');
+  return `<div class="card" style="margin-bottom:10px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:13px">
+    <div class="inum">${i+1}</div>
+    <div style="flex:1"><div style="font-weight:800;font-size:14px;font-family:'Nunito',sans-serif">Iteration ${i+1}</div>
+    ${dateStr?`<div style="font-size:11px;color:var(--mu)">${dateStr}</div>`:''}</div>
+    <div style="font-size:17px;color:var(--amber);letter-spacing:1.5px">${stars}</div>
+  </div>
+  <div class="fr"><span class="label">Prompt</span>
+    <div style="background:rgba(0,0,0,.18);border-radius:12px;padding:11px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word">${esc(it.prompt||'')}</div></div>
+  ${chips?`<div class="fr"><span class="label">Changes</span><div style="margin-top:2px">${chips}</div></div>`:''}
+  ${it.reflection?`<div class="fr"><span class="label">Reflection</span><div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.80)">${esc(it.reflection)}</div></div>`:''}
+  ${it.gemini?`<div class="fr"><span class="label">Gemini output</span><div style="background:rgba(0,0,0,.16);border-radius:10px;padding:10px 13px;font-size:12px;line-height:1.65;color:var(--mu);white-space:pre-wrap;word-break:break-word;max-height:110px;overflow-y:auto">${esc(it.gemini)}</div></div>`:''}
+  ${isTeacher
+    ?`<div style="height:1px;background:rgba(255,255,255,.09);margin:12px 0"></div>
+      <span class="label" style="color:var(--amber)">Formative Feedback</span>
+      <textarea id="fbi-${i}" rows="2" placeholder="Write feedback for this iteration…" style="margin-top:7px;margin-bottom:9px">${esc(existFb)}</textarea>
+      <button class="ba bs" onclick="saveFbBtn(${i})">Save Feedback</button>`
+    :existFb?`<div class="fbbox"><span class="label" style="color:var(--amber)">Teacher Feedback</span>
+      <div style="font-size:13px;line-height:1.65;margin-top:4px">${esc(existFb)}</div></div>`:''
+  }</div>`;
+}
+
+async function enterTeacher(){
+  stopGyre();
+  app.innerHTML=`${hdr('Teacher View','All Students','renderLanding()')}<div class="scr"><div class="loading">Loading roster…</div></div>`;
+  const roster=await getRoster();
+  const scr=app.querySelector('.scr');
+  if(!roster.length){scr.innerHTML=`<div class="card" style="text-align:center;padding:40px"><div class="mu">No students have logged in yet.</div></div>`;return;}
+  const iterArrays=await Promise.all(roster.map(r=>getIters(r.key)));
+  const counts={};
+  roster.forEach((r,i)=>{counts[r.key]=iterArrays[i].length;});
+  const total=Object.values(counts).reduce((s,v)=>s+v,0);
+  scr.innerHTML=`
+  <div style="margin-bottom:14px">
+    <h2 style="font-size:19px;font-weight:800">${roster.length} student${roster.length!==1?'s':''}</h2>
+    <div class="mu" style="font-size:12px;margin-top:2px">${total} total iteration${total!==1?'s':''}</div>
+  </div>
+  <div class="sgrid">${roster.map(r=>`<div class="stile" onclick="enterTStudent('${eA(r.key)}','${eA(r.name)}')">
+    <div style="font-weight:800;font-size:14px;margin-bottom:3px;font-family:'Nunito',sans-serif">${esc(r.name)}</div>
+    <div style="font-size:12px;color:var(--mu)">${counts[r.key]} iteration${counts[r.key]!==1?'s':''}</div>
+    <div class="pb2"><div class="pf" style="width:${Math.min(100,counts[r.key]*10)}%"></div></div>
+  </div>`).join('')}</div>`;
+}
+
+async function enterTStudent(key,name){
+  S.tStudent={key,name};
+  app.innerHTML=`${hdr('Teacher View',name,'enterTeacher()')}<div class="scr"><div class="loading">Loading…</div></div>`;
+  const iters=await getIters(key);
+  const fbs=await getFeedbacks(key);
+  const scr=app.querySelector('.scr');
+  if(!iters.length){scr.innerHTML=`<div class="card" style="text-align:center;padding:28px"><div class="mu">No iterations logged yet for ${esc(name)}.</div></div>`;return;}
+  scr.innerHTML=`<div class="mu" style="font-size:12px;margin-bottom:12px">${iters.length} iteration${iters.length!==1?'s':''}</div>
+  <div class="sa">${iters.map((it,i)=>iterCard(it,i,true,fbs[String(i)]||'')).join('')}</div>`;
+}
+
+async function saveFbBtn(idx){
+  const el=document.getElementById('fbi-'+idx);
+  const btn=el?el.nextElementSibling:null;
+  if(!el||!btn||!S.tStudent)return;
+  btn.textContent='Saving…';btn.disabled=true;
+  try{
+    await saveFeedback(S.tStudent.key,idx,el.value);
+    btn.textContent='Saved ✓';btn.style.background='var(--green)';
+    setTimeout(()=>{btn.textContent='Save Feedback';btn.style.background='';btn.disabled=false;},2200);
+  }catch(e){btn.textContent='Error';btn.disabled=false;}
+}
+
+async function renderPrint(){
+  stopGyre();
+  app.innerHTML=`${hdr('Print / Export',S.student.name,'renderStudent()')}<div class="scr"><div class="loading">Preparing…</div></div>`;
+  const iters=await getIters(S.student.key);
+  const fbs=await getFeedbacks(S.student.key);
+  const date=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  app.querySelector('.scr').innerHTML=`
+  <button class="bp no-print" style="margin-bottom:20px" onclick="window.print()">⎙ Print / Save as PDF</button>
+  <div class="pp">
+    <div class="ph">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:#888;margin-bottom:5px;font-family:'Nunito',sans-serif">Designing Intelligence — Prompt Iteration Log</div>
+      <div style="font-size:24px;font-weight:800;color:#0d5868;font-family:'Nunito',sans-serif;margin-bottom:3px">${esc(S.student.name)}</div>
+      <div style="font-size:12px;color:#888">${iters.length} iteration${iters.length!==1?'s':''} · ${date}</div>
+    </div>
+    ${iters.map((it,i)=>{
+      const stars='★'.repeat(it.rating||0)+'☆'.repeat(5-(it.rating||0));
+      let ds='';try{if(it.createdAt)ds=it.createdAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch(e){}
+      const fb=fbs[String(i)]||'';
+      const ch=[
+        ...(it.included||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span style="display:inline-block;background:#e4f9ee;color:#1a7a45;border-radius:50px;padding:2px 9px;font-size:11px;margin:2px;font-weight:700;font-family:'Nunito',sans-serif">+ ${esc(s)}</span>`),
+        ...(it.modified||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span style="display:inline-block;background:#fff8de;color:#7a5500;border-radius:50px;padding:2px 9px;font-size:11px;margin:2px;font-weight:700;font-family:'Nunito',sans-serif">~ ${esc(s)}</span>`),
+        ...(it.excluded||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<span style="display:inline-block;background:#ffe8ee;color:#7a2244;border-radius:50px;padding:2px 9px;font-size:11px;margin:2px;font-weight:700;font-family:'Nunito',sans-serif">− ${esc(s)}</span>`)
+      ].join('');
+      return `<div class="pi">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#1a7a8f;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Nunito',sans-serif">${i+1}</div>
+          <div style="flex:1"><strong style="color:#0d5868;font-family:'Nunito',sans-serif;font-size:14px">Iteration ${i+1}</strong>${ds?` <span style="color:#aaa;font-size:11px">· ${ds}</span>`:''}</div>
+          <div style="color:#b07a00;font-size:15px;letter-spacing:1px">${stars}</div>
+        </div>
+        <div style="margin-bottom:9px"><div class="pil">Prompt</div>
+          <div style="font-size:12px;line-height:1.7;background:#f2f8fb;border-radius:6px;padding:10px 13px;white-space:pre-wrap;word-break:break-word;border-left:3px solid #1a7a8f;color:#222">${esc(it.prompt||'')}</div></div>
+        ${ch?`<div style="margin-bottom:9px"><div class="pil">Changes</div><div style="margin-top:2px">${ch}</div></div>`:''}
+        ${it.reflection?`<div style="margin-bottom:9px"><div class="pil">Reflection</div><div style="font-size:12px;line-height:1.65;font-style:italic;color:#333">${esc(it.reflection)}</div></div>`:''}
+        ${fb?`<div class="pifb"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#b07a00;margin-bottom:3px;font-weight:700;font-family:'Nunito',sans-serif">Teacher Feedback</div><div style="font-size:12px;line-height:1.65;color:#5a4000">${esc(fb)}</div></div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+async function enterStudent(){
+  const name=(document.getElementById('ni').value||'').trim();
+  if(!name){alert('Please select your name.');return;}
+  app.innerHTML=`<div class="loading" style="min-height:100vh">Opening your log…</div>`;
+  try{
+    const key=await ensureStudent(name);
+    S.student={name,key};
+    await renderStudent();
+  }catch(e){
+    alert('Could not connect. Please check your internet connection.');
+    renderLanding();
+  }
+}
+
+renderLanding();
+</script>
+</body>
+</html>
